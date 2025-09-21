@@ -3,6 +3,9 @@ bits 16
 
 %define ENDL 0x0D, 0x0A
 
+start: ; Entry point of the bootloader
+    jmp main
+
 ;
 ; Prints a string to the screen
 ; Params:
@@ -24,7 +27,7 @@ puts:
 
     jmp .loop   ; Jump back into the loop
 
-.done
+.done ; Restore registers after printing to screen
     pop ax
     pop si
     ret
@@ -35,8 +38,8 @@ main:
     mov ds, ax ; Can't write to ds directly
     mov es, ax ; Can't write to es directly
 
-    ; Setup Stack
-    mov ss, ax
+    ; Setup Stack Segment and Stack Pointer
+    mov ss, ax     ; Move the value of ax register into the Stack Segment (0)
     mov sp, 0x7C00 ; Move the stack pointer register to the start of our OS, past the bootloader. The stack grows downwards!
 
     ; Print Message
@@ -50,5 +53,6 @@ main:
 
 msg: db 'Hello World!', ENDL, 0
 
+; All of the below is done after the program is executed, therefore, what we are seeing is what the bootloader is doing
 times 510-($-$$) db 0   ; Padding 512 bytes with 0s
 dw 0AA55h               ; This is the signature which the BIOS looks for when loading the bootloader
