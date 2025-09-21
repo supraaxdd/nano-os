@@ -3,6 +3,26 @@ bits 16
 
 %define ENDL 0x0D, 0x0A
 
+; FAT12 headers
+jmp short start
+nop
+
+; BIOS Parameter block
+bdm_oem:                    db 'MSWIN4.1'       ; 8 bytes
+bpb_bytes_per_sector:       dw 512              ; 2 bytes
+bpb_sectors_per_cluster:    db 1                ; 1 byte
+bpb_reserved_sectors:       dw 2                ; 2 bytes
+bpb_file_alloc_tables:      db 2                ; 2 bytes
+bpb_dir_entries_count:      dw 0E0h             ; 2 bytes
+bpb_total_sectors:          dw 2880             ; 2880 * 512 = 1.44MB
+bdb_media_descriptor_type:  db 0F0h             ; F0 = 3.5" Floppy Disk
+bpb_sectors_per_fat:        dw 9
+bpb_sectors_per_track:      dw 18
+bpb_heads:                  dw 2
+bpb_hidden_sectors:         dd 0
+bpb_large_sector_count:     dd 0
+
+
 start: ; Entry point of the bootloader
     jmp main
 
@@ -21,9 +41,9 @@ puts:
     or al, al   ; Verify if next character is null
     jz .done    ; Go to .done if flag register is 0
 
-    mov ah, 0x0e    ; Call BIOS interrupt
+    mov ah, 0x0e    ; Move instruction into ah register
     mov bh, 0
-    int 0x10
+    int 0x10        ; Call BIOS Interrupt
 
     jmp .loop   ; Jump back into the loop
 
