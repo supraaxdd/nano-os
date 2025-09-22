@@ -71,16 +71,140 @@ main:
     mov ss, ax     ; Move the value of ax register into the Stack Segment (0)
     mov sp, 0x7C00 ; Move the stack pointer register to the start of our OS, past the bootloader. The stack grows downwards!
 
+    ; Read something from disk
+    ; BIOS Should set DL to drive number
+    mov [ebr_drive_number], dl
+
+    mov ax, 1           ; LBA = 1, second sector from disk
+    mov cl, 1           ; 1 sector to read
+    mov bx, 0x7E00      ; data should be after the bootloader
+    call disk_read
+
     ; Print Message
     mov si, msg
     call puts
 
+    cli                 ; disable interrupts, this way the CPU can't get out of the "halt" state
     hlt
 
+floppy_error:
+    mov si, msg_disk_read_failed
+    call puts
+    jmp wait_for_key_and_reboot
+
+wait_for_key_and_reboot:
+    mov ah, 0
+    int 16h             ; Wait for keypress
+    jmp 0FFFFh:0        ; Jump to beginning of BIOS, should reboot
+
 .halt
-    jmp .halt
+    cli                 ; disable interrupts, this way the CPU can't get out of the "halt" state
+    hlt
+
+
+; Disk Startup routines
+
+; Converts an LBA address to a CHS address
+; The BIOS can only work with the CHS addressing scheme (Cylinder; Head; Sector on a Floppy/HDD. LBA stands for Logical Block Addressing)
+; Params:
+;   ax = LBA Address
+; Returns
+;   cx [bits 0-5]: sector number
+;   cx [bits 6-15]: cylinder
+;   dh: head
+;
+; Note how the registers are referenced: the counter register (cx) is divided into the lower 8 bits (ch) (BECAUSE LITTLE ENDIAN!!) 
+; and cl which is the higher 8 bits.
+; This means that the cx register is a 16-bit register with 8 + 8 = 16
+
+lba_to_chs_conversion:
+    push ax
+    push dx                             ; Push ax and dx onto the stack to save their states
+
+    xor dx, dx                          ; dx = 0
+    div word [bpb_sectors_per_track]    ; ax = LBA / Sectors Per Track
+                                        ; dx = LBA % Sectors Per Track
+    inc dx                              ; dx = (LBA % Sectors Per Track + 1) = Sector
+    mov cx, dx                          ; cx = Sector
+
+    xor dx, dx                          ; dx = 0
+    div word [bpb_heads]                ; ax = (LBA / Sectors Per Track) / Heads
+                                        ; dx = (LBA / Sectors Per Track) % Heads
+    mov dh, dl                          ; dh = head
+    mov ch, al                          ; ch = cylinder (lower 8 bits)
+    shl ah, 6
+    or cl, ah                           ; put the upper 2 bits of cylinder in cl
+
+    pop ax
+    mov dl, al                          ; restore dl
+    pop ax
+    ret
+
+; Reads sectors from a disk
+; Params:
+; - ax: LBA address
+; - cl: number of sectors to read (up to 128)
+; - dl: drive number
+; - es:bx: memory address where to store read data
+disk_read:
+    push ax                             ; Save registers we will modify
+    push bx
+    push cx
+    push dx
+    push di
+
+    push cx                             ; Push cx onto stack to save its state
+    call lba_to_chs_conversion          ; compute CHS
+    pop ax                              ; AL = number of sectors to read
+    
+    mov ah, 02h
+    mov di, 3                           ; retry count. This is stored in a register we haven't used
+
+.retry:
+    pusha                               ; Save all registers, we don't know what BIOS modifies
+    stc                                 ; Set carry flag, some BIOS' don't set it
+    int 13h                             ; carry flag cleared = success
+
+    jnc .done                           ; ^ Jump if no carry ^
+
+    ; Read failed
+    popa
+    call disk_reset
+
+    dec di
+    test di, di
+    jnz .retry
+
+.fail:
+    ; After all attempts failed
+    jmp floppy_error
+
+.done:
+    popa
+
+    pop di
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+
+; Resets disk controller
+; Params:
+; - dl: drive number
+disk_reset:
+    pusha 
+    mov ah, 0
+    stc
+    int 13h
+    jc floppy_error
+    popa
+    ret
+
 
 msg: db 'Hello World!', ENDL, 0
+msg_disk_read_failed: db 'Failed to read floppy!', ENDL, 0
 
 ; All of the below is done after the program is executed, therefore, what we are seeing is what the bootloader is doing
 times 510-($-$$) db 0   ; Padding 512 bytes with 0s
