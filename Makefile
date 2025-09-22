@@ -17,8 +17,6 @@ $(BUILD_DIR)/nano.img: bootloader | kernel
 	mkfs.fat -F 12 -n "NBOS" $(BUILD_DIR)/nano.img
 	dd if=$(BUILD_DIR)/bootloader.bin of=$(BUILD_DIR)/nano.img conv=notrunc
 	mcopy -i $(BUILD_DIR)/nano.img $(BUILD_DIR)/kernel.bin "::kernel.bin"
-# 	cp $(BUILD_DIR)/bootloader.bin $(BUILD_DIR)/nano.img
-# 	truncate -s 1440k $(BUILD_DIR)/nano.img
 
 # Bootloader binary
 bootloader: $(BUILD_DIR)/bootloader.bin
