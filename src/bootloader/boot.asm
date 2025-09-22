@@ -11,7 +11,7 @@ nop
 bdm_oem:                    db 'MSWIN4.1'           ; 8 bytes
 bpb_bytes_per_sector:       dw 512                  ; 2 bytes
 bpb_sectors_per_cluster:    db 1                    ; 1 byte
-bpb_reserved_sectors:       dw 2                    ; 2 bytes
+bpb_reserved_sectors:       dw 1                    ; 2 bytes
 bpb_file_alloc_tables:      db 2                    ; 2 bytes
 bpb_dir_entries_count:      dw 0E0h                 ; 2 bytes
 bpb_total_sectors:          dw 2880                 ; 2880 * 512 = 1.44MB
@@ -27,7 +27,7 @@ ebr_drive_number:           dw 00h                  ; 0x00 Floppy, 0x80 HDD
 ebr_flags:                  db 0                    ; Reserved for Windows NT (not applicable in this case)
 ebr_sig:                    dw 0x29                 ; Must be 0x28 or 0x29
 ebr_vol_no:                 db 12h, 34h, 56h, 78h   ; Serial Number. Value doesn't matter
-ebr_vol_label:              db 'Nano Floppy'        ; Volume label. 11 bytes padded with spaces
+ebr_vol_label:              db 'Nano OS    '        ; Volume label. 11 bytes padded with spaces
 ebr_sys_id:                 db 'FAT12   '           ; FAT File system type. 8 bytes padded with spaces
 
 
