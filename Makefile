@@ -12,7 +12,7 @@ BUILD_DIR=build
 .PHONY: all img kernel bootloader clean always
 
 # Image build
-$(BUILD_DIR)/nano.img: $(BUILD_DIR)/bootloader.bin | $(BUILD_DIR)
+$(BUILD_DIR)/nano.img: bootloader | kernel
 	dd if=/dev/zero of=$(BUILD_DIR)/nano.img bs=512 count=2880
 	mkfs.fat -F 12 -n "NBOS" $(BUILD_DIR)/nano.img
 	dd if=$(BUILD_DIR)/bootloader.bin of=$(BUILD_DIR)/nano.img conv=notrunc
@@ -22,7 +22,7 @@ $(BUILD_DIR)/nano.img: $(BUILD_DIR)/bootloader.bin | $(BUILD_DIR)
 
 # Bootloader binary
 bootloader: $(BUILD_DIR)/bootloader.bin
-$(BOOTLOADER_SRC_DIR)/bootloader.bin: always
+$(BUILD_DIR)/bootloader.bin: always
 	$(ASM) $(ASM_FLAGS) $(BOOTLOADER_SRC_DIR)/boot.asm -o $(BUILD_DIR)/bootloader.bin
 
 # Kernel binary
